@@ -27,6 +27,13 @@ def atom_features_v1(atom):
         )
     )
 
+def global_features_v1(cart_dist, conj_length):
+    """Return a string typed hash of global features"""
+
+    return str(
+        (cart_dist, conj_length)
+    )
+
 
 def atom_features_v2(atom):
     props = [
