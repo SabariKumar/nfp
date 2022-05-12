@@ -4,6 +4,11 @@ import networkx as nx
 import numpy as np
 import rdkit.Chem
 
+#from nfp import MolPreprocessor
+from nfp.preprocessing import SmilesBondIndexPreprocessor
+from nfp.preprocessing import BondIndexPreprocessor
+from nfp.preprocessing import MolPreprocessor
+
 try:
     import tensorflow as tf
 except ImportError:
@@ -17,7 +22,7 @@ from nfp.preprocessing.tokenizer import Tokenizer
 # Cartesian distance between radical centers and the length of any existing conjugation
 # path between the radical centers.
 
-class DiradPreprocessor(MolPreprocessor):
+class DiradPreprocessor(SmilesBondIndexPreprocessor):
     def __init__(
         self,
         atom_features: Optional[Callable[[rdkit.Chem.Atom], Hashable]] = None,
@@ -46,6 +51,7 @@ class DiradPreprocessor(MolPreprocessor):
 
 
     def create_nx_graph(self, mol: rdkit.Chem.Mol, **kwargs) -> nx.DiGraph:
+        mol = rdkit.Chem.MolFromSmiles(mol)
         g = nx.Graph(mol=mol)
         g.add_nodes_from(((atom.GetIdx(), {"atom": atom}) for atom in mol.GetAtoms()))
         g.add_edges_from(
@@ -56,17 +62,28 @@ class DiradPreprocessor(MolPreprocessor):
         )
         return nx.DiGraph(g)
 
-    def get_edge_features(
-        self, edge_data: list, max_num_edges
-    ) -> Dict[str, np.ndarray]:
-        bond_feature_matrix = np.zeros(max_num_edges, dtype=self.output_dtype)
-        for n, (start_atom, end_atom, bond_dict) in enumerate(edge_data):
-            flipped = start_atom == bond_dict["bond"].GetEndAtomIdx()
-            bond_feature_matrix[n] = self.bond_tokenizer(
-                self.bond_features(bond_dict["bond"], flipped=flipped)
-            )
+    # def get_edge_features(
+    #     self, edge_data: list, max_num_edges
+    # ) -> Dict[str, np.ndarray]:
+    #     bond_feature_matrix = np.zeros(max_num_edges, dtype=self.output_dtype)
+    #     for n, (start_atom, end_atom, bond_dict) in enumerate(edge_data):
+    #         flipped = start_atom == bond_dict["bond"].GetEndAtomIdx()
+    #         bond_feature_matrix[n] = self.bond_tokenizer(
+    #             self.bond_features(bond_dict["bond"], flipped=flipped)
+    #         )
+    #
+    #     return {"bond": bond_feature_matrix}
 
-        return {"bond": bond_feature_matrix}
+    def get_edge_features(
+            self, edge_data: list, max_num_edges
+    ) -> Dict[str, np.ndarray]:
+        bond_indices = np.zeros(max_num_edges, dtype=self.output_dtype)
+        for n, (_, _, edge_dict) in enumerate(edge_data):
+            bond_indices[n] = edge_dict["bond"].GetIdx()
+        edge_features = super(BondIndexPreprocessor, self).get_edge_features(
+            edge_data, max_num_edges
+        )
+        return {"bond_indices": bond_indices, **edge_features}
 
     def get_node_features(
         self, node_data: list, max_num_nodes
