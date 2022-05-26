@@ -45,11 +45,14 @@ class EdgeUpdate(GraphLayer):
             Outputs: bond_state
 
         """
+        print(f'inputs: {inputs}')
         if not self.use_global:
             atom_state, bond_state, connectivity = inputs
         else:
             atom_state, bond_state, connectivity, global_state = inputs
-            global_state = self.tile([global_state, bond_state])
+            #print(global_state)
+            #print(bond_state)
+            #global_state = self.tile([global_state, bond_state])
 
         # Get nodes at start and end of edge
         source_atom = self.gather([atom_state, connectivity[:, :, 0]])
@@ -100,7 +103,7 @@ class NodeUpdate(GraphLayer):
             atom_state, bond_state, connectivity = inputs
         else:
             atom_state, bond_state, connectivity, global_state = inputs
-            global_state = self.tile([global_state, bond_state])
+            #global_state = self.tile([global_state, bond_state])
 
         source_atom = self.gather([atom_state, connectivity[:, :, 1]])
 

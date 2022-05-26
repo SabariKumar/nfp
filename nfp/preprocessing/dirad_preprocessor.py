@@ -1,5 +1,7 @@
 from typing import Callable, Dict, Hashable, Optional
 
+import json
+
 import networkx as nx
 import numpy as np
 import rdkit.Chem
@@ -15,7 +17,7 @@ except ImportError:
     tf = None
 
 from nfp.preprocessing import features
-from nfp.preprocessing.preprocessor import Preprocessor
+from nfp.preprocessing.preprocessor import Preprocessor, load_from_json
 from nfp.preprocessing.tokenizer import Tokenizer
 
 # This class handles diradical fragments described using global features - ie,
@@ -49,10 +51,10 @@ class DiradPreprocessor(SmilesBondIndexPreprocessor):
         self.bond_features = bond_features
         self.global_features = global_features
 
-
-    def create_nx_graph(self, mol: rdkit.Chem.Mol, **kwargs) -> nx.DiGraph:
+# TODO: rework to use get/set to avoid base class signature mismatch
+    def create_nx_graph(self, mol: str, cart_dist: float, conj_path: int,  **kwargs) -> nx.DiGraph:
         mol = rdkit.Chem.MolFromSmiles(mol)
-        g = nx.Graph(mol=mol)
+        g = nx.Graph(mol=mol, cart_dist=cart_dist, conj_path=conj_path)
         g.add_nodes_from(((atom.GetIdx(), {"atom": atom}) for atom in mol.GetAtoms()))
         g.add_edges_from(
             (
@@ -95,8 +97,16 @@ class DiradPreprocessor(SmilesBondIndexPreprocessor):
             )
         return {"atom": atom_feature_matrix}
 
+# Graph data should be cart_dist, conj_path
     def get_graph_features(self, graph_data: dict) -> Dict[str, np.ndarray]:
-        return {}
+        graph_data.pop('mol')
+        global_feature_matrix = np.zeros(2)
+        for ind_, val in enumerate(graph_data.values()):
+#           global_feature_matrix[ind_] = val
+            global_feature_matrix[ind_] = self.global_tokenizer(
+                self.global_features([graph_data["cart_dist"], graph_data["conj_path"]])
+            )
+        return {"global_features": global_feature_matrix}
 
     @property
     def atom_classes(self) -> int:
@@ -121,6 +131,7 @@ class DiradPreprocessor(SmilesBondIndexPreprocessor):
             "atom": tf.TensorSpec(shape=(None,), dtype=self.output_dtype),
             "bond": tf.TensorSpec(shape=(None,), dtype=self.output_dtype),
             "global": tf.TensorSpec(shape=(None,), dtype = self.output_dtype),
+            "bond_indices": tf.TensorSpec(shape=(None,), dtype= self.output_dtype),
             "connectivity": tf.TensorSpec(shape=(None, 2), dtype=self.output_dtype),
         }
 
@@ -145,3 +156,9 @@ class DiradPreprocessor(SmilesBondIndexPreprocessor):
             )
             for key, val in self.output_signature.items()
         }
+
+    def from_json(self, filename: str) -> None:
+        """Set's the class's data with attributes taken from the save file"""
+        with open(filename, "r") as f:
+            json_data = json.load(f)
+        load_from_json(self, json_data)
