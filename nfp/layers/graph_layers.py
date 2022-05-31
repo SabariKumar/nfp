@@ -115,6 +115,9 @@ class NodeUpdate(GraphLayer):
             atom_state, bond_state, connectivity = inputs
         else:
             atom_state, bond_state, connectivity, global_state = inputs
+            bond_dims = tf.cast(tf.divide(tf.shape(bond_state), 2)[1], tf.int32)
+            global_state = tf.tile(global_state, tf.stack([1, bond_dims, 1]))
+
             #global_state = self.tile([global_state, bond_state])
 
         source_atom = self.gather([atom_state, connectivity[:, :, 1]])
