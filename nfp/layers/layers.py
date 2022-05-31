@@ -192,6 +192,7 @@ class Tile(tf_layers.Layer):
     def call(self, inputs, mask=None, **kwargs):
         global_state, target = inputs
         target_shape = tf.shape(target)[1]  # number of edges or nodes
+        # Don't need to do this for the global features for the ROBDE work!
         expanded = tf.expand_dims(global_state, 1)
         return tf.tile(expanded, tf.stack([1, target_shape, 1]))
 

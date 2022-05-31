@@ -36,9 +36,15 @@ class EdgeUpdate(GraphLayer):
         shape(bond_state) = [batch, num_bonds, bond_features]
         """
         super().build(input_shape)
+        print(input_shape)
 
         self.gather = nfp.Gather()
         self.concat = nfp.ConcatDense()
+
+        # Dense embedding for global features:
+        num_features = input_shape[0][-1]
+        print(f'num_features: {num_features}')
+        self.dense = tf_layers.Dense(num_features, activation='relu')
 
     def call(self, inputs, mask=None, **kwargs):
         """ Inputs: [atom_state, bond_state, connectivity]
@@ -50,9 +56,15 @@ class EdgeUpdate(GraphLayer):
             atom_state, bond_state, connectivity = inputs
         else:
             atom_state, bond_state, connectivity, global_state = inputs
-            #print(global_state)
-            #print(bond_state)
-            #global_state = self.tile([global_state, bond_state])
+
+            # NFP tile class doesn't work here - it expands the global state dimension and generates
+            # a rank 4 tensor, instead of just tiling in the second dimension.
+            # global_state = self.tile([global_state, bond_state])
+            bond_dims = tf.cast(tf.divide(tf.shape(bond_state), 2)[1], tf.int32)
+            # bond_dims = tf.cast(tf.shape(bond_state)[1], tf.int32)
+            print(bond_dims)
+            global_state = tf.tile(global_state, tf.stack([1, bond_dims, 1]))
+
 
         # Get nodes at start and end of edge
         source_atom = self.gather([atom_state, connectivity[:, :, 0]])

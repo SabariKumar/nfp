@@ -106,7 +106,7 @@ class DiradPreprocessor(SmilesBondIndexPreprocessor):
             global_feature_matrix[ind_] = self.global_tokenizer(
                 self.global_features([graph_data["cart_dist"], graph_data["conj_path"]])
             )
-        return {"global_features": global_feature_matrix}
+        return {"global": global_feature_matrix}
 
     @property
     def atom_classes(self) -> int:
