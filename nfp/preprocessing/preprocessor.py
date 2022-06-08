@@ -178,6 +178,8 @@ class Preprocessor(ABC):
         ), "max_num_nodes too small for given input"
 
         # Make sure that Tokenizer classes are correctly initialized
+        # Setting this to False for test ensures that the integer class gets set to 'unknown' if
+        # the model hasn't seen the feature class before.
         for _, tokenizer in getmembers(self, lambda x: type(x) == Tokenizer):
             tokenizer.train = train
 
