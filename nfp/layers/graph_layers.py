@@ -70,7 +70,9 @@ class EdgeUpdate(GraphLayer):
   #      source_atom = self.gather([atom_state, connectivity[:, :, 0]])
   #      target_atom = self.gather([atom_state, connectivity[:, :, 1]])
         source_atom = self.gather([atom_state, connectivity[:, 0]])
+        source_atom = tf.tile(source_atom, tf.stack([1, bond_dims, 1]))
         target_atom = self.gather([atom_state, connectivity[:, 1]])
+        target_atom = tf.tile(target_atom, tf.stack([1, bond_dims, 1]))
 
         if not self.use_global:
             new_bond_state = self.concat(
